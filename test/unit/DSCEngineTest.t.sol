@@ -22,6 +22,14 @@ contract DSCEngineTest is Test {
         // Deploy the contract
         deployer = new DeployDSC();
         (dsc, dscEngine, helperConfig) = deployer.run();
+        (ethUsdPriceFeed,, weth,,) = helperConfig.activeNetworkConfig();
     }
 
+    function testGetUsdValue() external {
+        uint256 amount = 100; // 100 WETH
+        // int256 ethPriceinUsd = helperConfig.ETH_USD_PRICE();
+        uint256 expectedPrice = amount * 2000;
+        uint256 calculatedPrice = dscEngine.getUsdValue(weth, amount);
+        assertEq(calculatedPrice, expectedPrice);
+    }
 }
