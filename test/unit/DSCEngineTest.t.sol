@@ -36,12 +36,13 @@ contract DSCEngineTest is Test {
     // Price Tests 
     //////////////////////////////
 
+    // This should ideally be network dependant
     function testGetUsdValue() external view {
         uint256 amount = 100; // 100 WETH
         // int256 ethPriceinUsd = helperConfig.ETH_USD_PRICE();
         uint256 expectedPrice = amount * 2000;
         uint256 calculatedPrice = dscEngine.getUsdValue(weth, amount);
-        assertEq(calculatedPrice, expectedPrice);
+        assert(calculatedPrice == expectedPrice);
     }
 
     //////////////////////////////
@@ -51,9 +52,8 @@ contract DSCEngineTest is Test {
     function testRevertsIfCollateralZero() external {
         vm.startPrank(USER);
         ERC20Mock(weth).approve(address(dscEngine), COLLATERAL_AMOUNT);
-        uint256 collateralAmount = 0;
         vm.expectRevert(DSCEngine.DSCEngine__NeedsMoreThanZero.selector);
-        dscEngine.depositCollateral(weth, collateralAmount);
+        dscEngine.depositCollateral(weth, 0);
         vm.stopPrank();
     }
 
