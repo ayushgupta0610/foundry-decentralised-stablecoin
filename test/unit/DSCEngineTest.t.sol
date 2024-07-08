@@ -86,6 +86,16 @@ contract DSCEngineTest is Test {
         vm.stopPrank();
     }
 
+    function testAccountCollateralValue() external {
+        vm.startPrank(USER);
+        ERC20Mock(weth).approve(address(dscEngine), COLLATERAL_AMOUNT);
+        dscEngine.depositCollateral(weth, COLLATERAL_AMOUNT);
+        vm.stopPrank();
+        uint256 collateralValue = dscEngine.getAccountCollateralValue(USER);
+        uint256 expectedCollateralValue = dscEngine.getUsdValue(weth, COLLATERAL_AMOUNT);
+        assert(collateralValue == expectedCollateralValue);
+    }
+
     function testRevertsWithUnapprovedCollateral() external {
         ERC20Mock ranToken = new ERC20Mock("RAN", "RAN", USER, COLLATERAL_AMOUNT);
         vm.startPrank(USER);
@@ -104,7 +114,6 @@ contract DSCEngineTest is Test {
 
     function testCanDepositCollateralAndGetAccountInfo() external depositedCollateral {
         (uint256 totalDscMinted, uint256 collateralValueInUsd) = dscEngine.getAccountInformation(USER);
-
         uint256 expectedTotalDscMinted = 0;
         uint256 expectedCollateralToken = dscEngine.getTokenAmountFromUsdValue(weth, collateralValueInUsd);
         assert(totalDscMinted == expectedTotalDscMinted);
@@ -131,7 +140,7 @@ contract DSCEngineTest is Test {
     //////////////////////////////
 
     function testRedeemCollateralAndGetAccountInfo() external depositedCollateral {
-        uint256 amount = 2 ether;
+        uint256 amount = 2 ether; // lesser than the collateral amount deposited
         vm.startPrank(USER);
         dscEngine.redeemCollateral(weth, amount);
         vm.stopPrank();
@@ -144,20 +153,30 @@ contract DSCEngineTest is Test {
     }
 
     function testRedeemCollateralForDsc() external {
-        
+        // Mint some DSC
+        uint256 amount = 2 ether;
+        vm.startPrank(USER);
+        ERC20Mock(weth).approve(address(dscEngine), COLLATERAL_AMOUNT);
+        // Caclulate the max amount of DSC that can be minted from the collateral
+        uint256 dscAmountThatCanBeMinted = dscEngine.getMaxAmountOfDscThatCanBeMintedWith(weth, amount);
+        dscEngine.depositCollateralAndMintDsc(weth, COLLATERAL_AMOUNT, dscAmountThatCanBeMinted);
+        ERC20Mock(address(dsc)).approve(address(dscEngine), amount);
+        uint256 dscAmountToBurn = 1 ether;
+        dscEngine.redeemCollateralForDsc(weth, amount, dscAmountToBurn);
+        vm.stopPrank();
+        (uint256 totalDscMinted, uint256 collateralValueInUsd) = dscEngine.getAccountInformation(USER);
+        uint256 expectedTotalDscMinted = dscAmountThatCanBeMinted - dscAmountToBurn;
+        uint256 expectedCollateralToken = dscEngine.getTokenAmountFromUsdValue(weth, collateralValueInUsd);
+        assert(totalDscMinted == expectedTotalDscMinted);
+        assert(expectedCollateralToken == COLLATERAL_AMOUNT - amount);
     }
 
     //////////////////////////////
     // Mint and Burn Tests 
     //////////////////////////////
 
-    function testMintAndBurn() external {
-        
-    }
-
     //////////////////////////////
     // Liquidate Tests 
     //////////////////////////////
 
-    function test
 }
