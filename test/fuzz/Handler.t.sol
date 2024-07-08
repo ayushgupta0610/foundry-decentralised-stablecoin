@@ -68,7 +68,7 @@ contract Handler is Test {
 
         vm.startPrank(msg.sender);
         collateral.mint(msg.sender, collateralAmount);
-        collateral.approve(address(dscEngine), collateralAmount);
+        collateral.approve(address(this), collateralAmount);
         dscEngine.depositCollateral(address(collateral), collateralAmount);
         usersWithCollateralDeposited.push(msg.sender);
         vm.stopPrank();
