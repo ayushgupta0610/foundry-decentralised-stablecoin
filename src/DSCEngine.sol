@@ -26,6 +26,7 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuar
 import { DecentralisedStableCoin } from "./DecentralisedStableCoin.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { AggregatorV3Interface } from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import { OracleLib } from "./libraries/OracleLib.sol";
 
 
 /**
@@ -53,6 +54,11 @@ contract DSCEngine is ReentrancyGuard {
     error DSCEngine__HealthFactorNotImproved();
 
     //////////////////////////////
+    // Type
+    //////////////////////////////
+    using OracleLib for AggregatorV3Interface;
+
+    //////////////////////////////
     // State Variables
     //////////////////////////////
     uint256 private constant ADDITIONAL_FEED_PRECISION = 1e10; 
@@ -61,8 +67,6 @@ contract DSCEngine is ReentrancyGuard {
     uint256 private constant LIQUIDATION_PRECISION = 100; // for pecentage
     uint256 private constant MIN_HEALTH_FACTOR = 1e18; // 100% collateralised
     uint256 private constant LIQUIDATION_BONUS = 10; // this means a 10% bonus
-
-
 
     mapping(address token => address priceFeeds) private s_priceFeeds; // token to price feeds address mapping 
     mapping(address user => mapping(address token => uint256 amount)) private s_collateralDeposited; // Collateral balances of the user
@@ -327,7 +331,7 @@ contract DSCEngine is ReentrancyGuard {
     function getTokenAmountFromUsdValue(address collateralToken, uint256 usdAmountInWei) public view returns (uint256) {
         // Get the price of the token in USD
         AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeeds[collateralToken]);
-        (, int256 price, , , ) = priceFeed.latestRoundData(); // Decimals are 8
+        (, int256 price, , , ) = priceFeed.staleCheckLatestRoundData(); // Decimals are 8
 
         // The return value from chainlink will be 1000 * 1e8
         return ((usdAmountInWei * PRECISION) / (uint256(price) * ADDITIONAL_FEED_PRECISION));
@@ -344,7 +348,7 @@ contract DSCEngine is ReentrancyGuard {
     function getUsdValue(address token, uint256 amount) public view returns (uint256) {
         // Get the price of the token in USD
         AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeeds[token]);
-        (, int256 price, , , ) = priceFeed.latestRoundData(); // Decimals are 8
+        (, int256 price, , , ) = priceFeed.staleCheckLatestRoundData(); // Decimals are 8
 
         // The return value from chainlink will be 1000 * 1e8
         return ((uint256(price) * ADDITIONAL_FEED_PRECISION) * amount) / PRECISION;
